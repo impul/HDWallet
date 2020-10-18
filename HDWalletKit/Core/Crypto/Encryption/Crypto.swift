@@ -30,15 +30,17 @@ public final class Crypto {
     }
     
     public static func generatePublicKey(data: Data, compressed: Bool) -> Data {
-        return ECDSA.secp256k1.generatePublicKey(with: data, isCompressed: compressed)
+        let encrypter = EllipticCurveEncrypterSecp256k1()
+        var publicKey = encrypter.createPublicKey(privateKey: data)
+        return encrypter.export(publicKey: &publicKey, compressed: compressed)
     }
     
     public static func sha3keccak256(data:Data) -> Data {
-        return Data(bytes: SHA3(variant: .keccak256).calculate(for: data.bytes))
+        return Data(SHA3(variant: .keccak256).calculate(for: data.bytes))
     }
     
     public static func hashSHA3_256(_ data: Data) -> Data {
-        return Data(bytes: CryptoSwift.SHA3(variant: .sha256).calculate(for: data.bytes))
+        return Data(CryptoSwift.SHA3(variant: .sha256).calculate(for: data.bytes))
     }
     
     public static func sign(_ hash: Data, privateKey: Data) throws -> Data {
@@ -47,6 +49,21 @@ public final class Crypto {
             throw HDWalletKitError.failedToSign
         }
         return encrypter.export(signature: &signatureInInternalFormat)
+    }
+    
+    public static func verifySigData(for tx: Transaction, inputIndex: Int, utxo: TransactionOutput, sigData: Data, pubKeyData: Data) throws -> Bool {
+        // Hash type is one byte tacked on to the end of the signature. So the signature shouldn't be empty.
+        guard !sigData.isEmpty else {
+            throw ScriptMachineError.error("SigData is empty.")
+        }
+        // Extract hash type from the last byte of the signature.
+        let hashType = SighashType(sigData.last!)
+        // Strip that last byte to have a pure signature.
+        let signature = sigData.dropLast()
+        
+        let sighash: Data = tx.signatureHash(for: utxo, inputIndex: inputIndex, hashType: hashType)
+        
+        return try ECDSA.secp256k1.verifySignature(signature, message: sighash, publicKeyData: pubKeyData)
     }
 }
 

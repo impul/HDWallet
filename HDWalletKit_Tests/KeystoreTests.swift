@@ -12,10 +12,9 @@ import XCTest
 class KeystoreTests: XCTestCase {
     
     func testKeyStoreGeneration() {
-        let data = "abandon amount liar amount expire adjust cage candy arch gather drum buyer"
-        let keystore = try! KeystoreV3(data: data, password: "qwertyui")
-        let encodedData = (try? keystore?.encodedData())!
-        print((encodedData! as NSData).description)
+        let data = Data("abandon amount liar amount expire adjust cage candy arch gather drum buyer".utf8)
+        let passwordData =  Data("qwertyui".utf8)
+        let keystore = try! KeystoreV3(data: data, passwordData: passwordData)
         XCTAssertEqual(keystore?.keystoreParams?.crypto.cipher, "aes-128-ctr")
         XCTAssertEqual(keystore?.keystoreParams?.crypto.kdf, "scrypt")
         XCTAssertEqual(keystore?.keystoreParams?.crypto.kdfparams.r, 8)
@@ -25,10 +24,10 @@ class KeystoreTests: XCTestCase {
     }
     
     func testDecodeKeystore() {
-        let data = "abandon amount liar amount expire adjust cage candy arch gather drum buyer"
-        let password = "qwertyui"
-        let keystore = try! KeystoreV3(data: data, password: password)
-        guard let decoded = try? keystore?.getDecriptedKeyStore(password: password) else {
+        let data = Data("abandon amount liar amount expire adjust cage candy arch gather drum buyer".utf8)
+        let passwordData =  Data("qwertyui".utf8)
+        let keystore = try! KeystoreV3(data: data, passwordData: passwordData)
+        guard let decoded = try? keystore?.getDecriptedKeyStore(passwordData: passwordData) else {
             fatalError()
         }
         XCTAssertEqual(decoded, data)
